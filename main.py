@@ -138,33 +138,6 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         print(f"❌ [Replicate Error]: {e}")
         logging.error(f"Replicate Error: {e}")
-        await context.bot.send_message(chat_id=user_id, text=f"⚠️ Помилка ШІ: {str(e)}")
-
-def main():
-    keep_alive()
-
-    TOKEN = os.environ.get("TELEGRAM_TOKEN")
-    if not TOKEN:
-        print("❌ Помилка: Змінна TELEGRAM_TOKEN не знайдена!")
-        exit(1)
-
-    # Примусово створюємо цикл подій для Python 3.14+
-    try:
-        loop = asyncio.get_event_loop_policy().get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError()
-    except Exception:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    app_bot = ApplicationBuilder().token(TOKEN).build()
-
-    app_bot.add_handler(CommandHandler("start", start_command))
-    app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
-
-    print("🚀 Бот для ШІ-фотосесій з підтримкою Replicate запущений...")
-    app_bot.run_polling()
-
-if __name__ == '__main__':
-    main()
+        await context.bot.send_message(
+            chat_id=user_id, 
+            text=f"⚠️ Помилка Replicate: {str(e)}\n\nЗазвичай після поповнення балансу потрібно кілька хвилин, щоб система оновила статус.
