@@ -116,9 +116,9 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Викликаємо модель за її чистим ім'ям без фіксованого хешу версії
+        # Використовуємо точний робочий хеш версії PhotoMaker з офіційної документації API[cite: 5]
         output = replicate.run(
-            "tencentarc/photomaker",
+            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918ae4d9f6e57028d523f4bb8461f9f03253",
             input={
                 "input_image": user_photo_url,
                 "prompt": selected_style["prompt"],
