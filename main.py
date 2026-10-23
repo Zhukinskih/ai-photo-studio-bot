@@ -68,6 +68,8 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_data_store:
         user_data_store[user_id] = {'photos': []}
 
+    photo_url = None
+
     # Визначаємо, чи це звичайне фото, чи документ-картинка з ПК
     if update.message.photo:
         photo_file = update.message.photo[-1]
@@ -84,7 +86,9 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return
 
-    user_data_store[user_id]['photos'].append(photo_url)
+    if photo_url:
+        user_data_store[user_id]['photos'].append(photo_url)
+    
     total_photos = len(user_data_store[user_id]['photos'])
 
     # Коли є мінімум 3 фото, показуємо сітку з 6 стилів (2 на 3)
@@ -149,4 +153,25 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     # Перевірка на кнопки посткабінету (зміна стилю або нові фото)
     if data == "action_change_style":
-        await query
+        await query.answer()
+        if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
+            await query.edit_message_text("❌ Спочатку завантаж фото через /start.")
+            return
+        await query.edit_message_text("🎨 Обери новий стиль для твоїх поточних фото:")
+        await show_styles_menu(query, context, user_id)
+        return
+
+    if data == "action_new_photos":
+        await query.answer()
+        user_data_store[user_id] = {'photos': []}
+        await query.edit_message_text(
+            "🔄 Сеанс скинуто.\n\n"
+            "📸 Надішли **3-4 нові фото (по груди)**, щоб почати спочатку."
+        )
+        return
+
+    # Логіка генерації фото за обраним стилем
+    await query.answer()
+    style_choice = data
+
+    if user_
