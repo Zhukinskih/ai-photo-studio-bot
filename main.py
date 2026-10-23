@@ -43,7 +43,7 @@ user_data_store = {}
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio!** ✨\n\n"
-        "Я допоможу тобі створити розкішну тематичну фотосесію за допомогою штучного інтелекту.\n\n"
+        "Я допоможу тобі перетворити твоє селфі на розкішну фотосесію за допомогою штучного інтелекту.\n\n"
         "📸 **Будь ласка, надішли 1 чітке селфі**, де добре видно твоє обличчя."
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
@@ -53,10 +53,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     photo_file = update.message.photo[-1]
     
-    # Отримуємо файл від Telegram
     file = await context.bot.get_file(photo_file.file_id)
-    
-    # Отримуємо пряме посилання на завантажене фото
     photo_url = file.file_path
 
     user_data_store[user_id] = {'photo_url': photo_url}
@@ -69,12 +66,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "📸 **Фото отримано!** Тепер оберемо стиль для твоєї фотосесії:",
+        "📸 **Селфі успішно збережено!** Тепер оберемо стиль для твоєї фотосесії:",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
 
-# --- Обробка вибору стилю та запуск Replicate ---
+# --- Обробка вибору стилю та запуск Replicate Image-to-Image ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -89,7 +86,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "luxurious aesthetic photoshoot of a beautiful glamorous person on a tropical beach at sunset, turquoise ocean, professional fashion photography, 8k"
+            "prompt": "luxurious aesthetic high-fashion portrait of this person on a tropical beach at sunset, turquoise ocean, professional photography, 8k, highly detailed"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
@@ -106,24 +103,24 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ Штучний інтелект створює твою розкішну фотосесію (це займе ~30 секунд)...",
+        f"⏳ ШІ обробляє твоє селфі та створює фотосесію (це займе ~30-40 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
-        print(f"🚀 [Replicate] Запуск генерації для стилю: {selected_style['title']} з фото: {user_photo_url}")
+        print(f"🚀 [Replicate Img2Img] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо моделі image-to-image / IP-Adapter або передаємо посилання як вхідне зображення
+        # Використовуємо офіційну модель SDXL з параметром image для Image-to-Image
         output = replicate.run(
             "stability-ai/sdxl:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438",
             input={
+                "image": user_photo_url,
                 "prompt": selected_style["prompt"],
-                "image": user_photo_url,  # Передаємо селфі користувача
-                "negative_prompt": "ugly, blurry, low quality, distorted face",
+                "negative_prompt": "ugly, blurry, low quality, distorted face, deformed",
+                "prompt_strength": 0.65,  # Зберігає риси твого обличчя, але додає стиль
                 "width": 768,
                 "height": 1024,
-                "num_outputs": 1,
-                "prompt_strength": 0.8
+                "num_outputs": 1
             }
         )
 
@@ -145,7 +142,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         logging.error(f"Replicate Error: {e}")
         await context.bot.send_message(
             chat_id=user_id, 
-            text=f"⚠️ Помилка Replicate: {str(e)}"
+            text=f"⚠️ Помилка обробки фото: {str(e)}"
         )
 
 def main():
@@ -171,7 +168,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій з підтримкою Replicate запущений...")
+    print("🚀 Бот для ШІ-фотосесій Image-to-Image запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
