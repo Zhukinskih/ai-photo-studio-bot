@@ -43,7 +43,7 @@ user_data_store = {}
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio!** ✨\n\n"
-        "Я допоможу тобі перетворити твоє селфі на розкішну фотосесію зі збереженням твого обличчя.\n\n"
+        "Я допоможу тобі створити круту фотосесію із точним перенесенням твого обличчя.\n\n"
         "📸 **Будь ласка, надішли 1 чітке селфі**, де добре видно твоє обличчя."
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
@@ -77,7 +77,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- Обробка вибору стилю та запуск PhotoMaker ---
+# --- Обробка вибору стилю та запуск генерації + Face Swap ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -89,19 +89,18 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("❌ Будь ласка, спочатку надішли своє селфі за допомогою команди /start.")
         return
 
-    # Оновлені промпти з акцентом на абсолютну фотореалістичність та природну текстуру шкіри
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "RAW photo, a handsome man img on a tropical beach at sunset, turquoise ocean, natural skin texture, pores, professional DSLR photography, 35mm lens, shot on Canon, 8k resolution, photorealistic"
+            "prompt": "RAW photo, a handsome man on a tropical beach at sunset, turquoise ocean, natural skin texture, professional DSLR photography, 35mm lens, 8k, photorealistic"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
-            "prompt": "RAW photo, a handsome man img in a cozy winter chalet, snowy peaks background, natural skin texture, realistic lighting, professional photography, DSLR, 8k, highly detailed, photorealistic"
+            "prompt": "RAW photo, a handsome man in a cozy winter chalet, snowy peaks background, natural skin texture, professional photography, DSLR, 8k, photorealistic"
         },
         "style_glamour": {
             "title": "✨ Вечірній шик",
-            "prompt": "RAW photo, a handsome man img in a luxury penthouse, elegant evening wear, cinematic lighting, natural skin texture, professional portrait photography, 8k, photorealistic"
+            "prompt": "RAW photo, a handsome man in a luxury penthouse, elegant evening wear, cinematic lighting, natural skin texture, professional portrait photography, 8k, photorealistic"
         }
     }
 
@@ -110,45 +109,62 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ ШІ створює фотореалістичну фотосесію (це займе ~30-40 секунд)...",
+        f"⏳ Крок 1/2: Генеруємо базове фото...",
         parse_mode='Markdown'
     )
 
     try:
-        print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
-        
-        output = replicate.run(
-            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
+        # Крок 1: Генеруємо якісне базове фото через Flux Schnell
+        print(f"🚀 [Gen] Генеруємо базове зображення для стилю: {selected_style['title']}")
+        base_output = replicate.run(
+            "black-forest-labs/flux-schnell",
             input={
-                "input_image": user_photo_url,
                 "prompt": selected_style["prompt"],
-                "negative_prompt": "cartoon, illustration, painting, drawing, art, 3d render, anime, blurry, low quality, distorted face, deformed, bad anatomy, plastic skin",
-                "num_steps": 50,
-                "num_outputs": 1
+                "num_outputs": 1,
+                "aspect_ratio": "4:5",
+                "output_format": "jpg"
             }
         )
 
-        print(f"✅ [Replicate] Успішно отримано результат: {output}")
+        base_image_url = base_output[0] if isinstance(base_output, list) else base_output
+        print(f"✅ [Gen] Базове фото створено: {base_image_url}")
 
-        if output:
-            image_item = output[0]
-            image_url = image_item.url if hasattr(image_item, 'url') else str(image_item)
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"⏳ Крок 2/2: Переносимо твоє обличчя за допомогою Face Swap..."
+        )
+
+        # Крок 2: Точна заміна обличчя згідно з твоїм прикладом API
+        print(f"🚀 [FaceSwap] Запуск заміни обличчя...")
+        swap_output = replicate.run(
+            "cdingram/face-swap:d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
+            input={
+                "swap_image": user_photo_url,      # Твоє селфі (те, що підставляємо)
+                "input_image": base_image_url      # Згенероване фото (куди підставляємо)
+            }
+        )
+
+        print(f"✅ [FaceSwap] Успішно! Результат: {swap_output}")
+
+        if swap_output:
+            # Обробка результату (модель повертає об'єкт файлу з атрибутом url або рядок)
+            final_image_url = swap_output.url if hasattr(swap_output, 'url') else (swap_output[0] if isinstance(swap_output, list) else swap_output)
             
             await context.bot.send_photo(
                 chat_id=user_id,
-                photo=image_url,
+                photo=str(final_image_url),
                 caption=f"✨ Твоя реалістична фотосесія у стилі **{selected_style['title']}** готова!",
                 parse_mode='Markdown'
             )
         else:
-            await context.bot.send_message(chat_id=user_id, text="❌ Порожній результат від ШІ.")
+            await context.bot.send_message(chat_id=user_id, text="❌ Порожній результат від моделі заміни обличчя.")
 
     except Exception as e:
-        print(f"❌ [Replicate Error]: {e}")
-        logging.error(f"Replicate Error: {e}")
+        print(f"❌ [Error]: {e}")
+        logging.error(f"Error: {e}")
         await context.bot.send_message(
             chat_id=user_id, 
-            text=f"⚠️ Помилка обробки обличчя: {str(e)}"
+            text=f"⚠️ Помилка обробки: {str(e)}"
         )
 
 def main():
@@ -174,7 +190,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій з PhotoMaker запущений...")
+    print("🚀 Бот з двокроковим Face Swap запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
