@@ -114,19 +114,23 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     )
 
     try:
-        # Крок 1: Генеруємо якісний фон через SDXL за назвою моделі (без прив'язки до застарілого хешу)
+        # Крок 1: Генеруємо якісний фон через SDXL за твоїм точним прикладом API
         print(f"🚀 [Gen] Генеруємо базове зображення через SDXL для стилю: {selected_style['title']}")
         base_output = replicate.run(
-            "stability-ai/sdxl",
+            "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
             input={
-                "prompt": selected_style["prompt"],
-                "num_outputs": 1,
                 "width": 768,
-                "height": 960
+                "height": 960,
+                "prompt": selected_style["prompt"],
+                "refine": "expert_ensemble_refiner",
+                "apply_watermark": False,
+                "num_inference_steps": 25
             }
         )
 
-        base_image_url = base_output[0] if isinstance(base_output, list) else base_output
+        # Отримуємо URL згенерованого базового фото
+        base_image_item = base_output[0] if isinstance(base_output, list) else base_output
+        base_image_url = base_image_item.url if hasattr(base_image_item, 'url') else str(base_image_item)
         print(f"✅ [Gen] Базове фото створено: {base_image_url}")
 
         await context.bot.send_message(
@@ -147,7 +151,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [FaceSwap] Успішно! Результат: {swap_output}")
 
         if swap_output:
-            final_image_url = swap_output.url if hasattr(swap_output, 'url') else (swap_output[0] if isinstance(swap_output, list) else swap_output)
+            final_image_url = swap_output.url if hasattr(swap_output, 'url') else (swap_output[0] if isinstance(swap_output, list) else str(swap_output))
             
             await context.bot.send_photo(
                 chat_id=user_id,
