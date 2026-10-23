@@ -36,7 +36,7 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Словник для тимчасового збереження даних користувача та його референсів
+# Словник для збереження даних користувача
 user_data_store = {}
 
 # --- Команда /start з рекомендаціями ---
@@ -97,12 +97,12 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🛥 Яхта в океані", callback_data="style_beach")
             ],
             [
-                InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
-                InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+                InlineKeyboardButton("🌴 Тропічний Острів", callback_data="style_island"),
+                InlineKeyboardButton("🏎️ Суперкар Монако", callback_data="style_supercar")
             ],
             [
-                InlineKeyboardButton("💼 Executive Портрет", callback_data="style_linkedin"),
-                InlineKeyboardButton("🎞 Retro Film 90s", callback_data="style_retro")
+                InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
+                InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -119,7 +119,7 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
-# --- Функція для виведення меню стилів ---
+# --- Меню стилів ---
 async def show_styles_menu(chat_id, context):
     keyboard = [
         [
@@ -127,12 +127,12 @@ async def show_styles_menu(chat_id, context):
             InlineKeyboardButton("🛥 Яхта в океані", callback_data="style_beach")
         ],
         [
-            InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
-            InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+            InlineKeyboardButton("🌴 Тропічний Острів", callback_data="style_island"),
+            InlineKeyboardButton("🏎️ Суперкар Монако", callback_data="style_supercar")
         ],
         [
-            InlineKeyboardButton("💼 Executive Портрет", callback_data="style_linkedin"),
-            InlineKeyboardButton("🎞 Retro Film 90s", callback_data="style_retro")
+            InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
+            InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -143,7 +143,7 @@ async def show_styles_menu(chat_id, context):
         parse_mode='Markdown'
     )
 
-# --- Обробка вибору стилю та асинхронна генерація через Flux-2-Pro ---
+# --- Обробка стилю та асинхронна генерація ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
@@ -151,7 +151,6 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.answer()
 
-    # Перевірка на кнопки посткабінету
     if data == "action_change_style":
         if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
             await context.bot.send_message(chat_id=user_id, text="❌ Спочатку завантаж фото через /start.")
@@ -183,6 +182,14 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             "title": "🛥 Яхта в океані (Superyacht)",
             "prompt": "High-end luxury travel magazine waist-up medium portrait of the man from the input images relaxing on the deck of a modern superyacht, crystal clear turquoise open ocean panorama with a soft warm sunset glowing far on the horizon background, natural bright daytime light on the subject's face, accurate natural skin tones, wearing a stylish unbuttoned white linen shirt, shot on Leica S3, 50mm lens, zero plastic look, 8k resolution"
         },
+        "style_island": {
+            "title": "🌴 Тропічний Острів (Paradise Beach)",
+            "prompt": "High-end travel magazine waist-up portrait of the man from the input images standing relaxed waist-deep in crystal-clear turquoise tropical ocean water near a white sandy shore, warm golden hour sun glowing in the sky, lush tropical green islands and pristine palm trees beach clearly visible on the background, soft natural bright daylight illuminating the face with accurate natural skin tones and slightly wet slicked hair, relaxed natural pose looking into the camera, wearing minimalist swimwear, shot on Sony Alpha 1, 35mm wide lens, zero plastic look, visible micro-pores, natural water droplets on skin, photorealistic"
+        },
+        "style_supercar": {
+            "title": "🏎️ Суперкар Монако",
+            "prompt": "High-end editorial waist-up medium portrait of the man from the input images standing next to a luxury modern supercar in front of a grand illuminated luxury hotel entrance in Monaco, warm sunset dusk lighting, elegant warm architectural lights reflecting on the car's surface in the background, soft neutral daylight illuminating the subject's face for precise skin tone accuracy, wearing a modern dark fitted polo, shot on Hasselblad H6D-100c, 50mm lens, razor-sharp focus, unpolished realistic skin texture, 8k"
+        },
         "style_glamour": {
             "title": "✨ Пентхаус Манхеттен",
             "prompt": "Cinematic high-end corporate waist-up medium portrait of the man from the input images standing inside a luxury Manhattan skyscraper penthouse by massive floor-to-ceiling glass windows, iconic recognizable New York City skyline with famous skyscrapers and glowing evening lights clearly visible and detailed on the background, warm golden hour sunset illuminating the urban architecture, soft neutral indoor lighting on the subject's face, natural realistic skin tones, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/4, crisp architectural background details, magazine cover aesthetic"
@@ -190,21 +197,12 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         "style_cafe": {
             "title": "☕️ Вуличне кафе (Париж)",
             "prompt": "Candid documentary style waist-up medium portrait of the man from the input images sitting at an outdoor terrace of a chic Parisian cafe, holding a coffee cup, soft overcast neutral daylight on the face, warm golden hour sunset glow reflecting softly on European street buildings in the deep background, wearing a stylish minimalist black hoodie, shot on Fujifilm X-T5, 35mm lens, natural skin texture"
-        },
-        "style_linkedin": {
-            "title": "💼 Executive Портрет",
-            "prompt": "Professional executive corporate waist-up headshot of the man from the input images inside a modern high-end architectural office, warm sunset city lights blurred far on the background through panoramic windows, soft natural neutral window light on the face for clean skin tones, confident calm expression, wearing a tailored navy blazer and crisp white shirt, shot on Sony A7R V, 85mm lens, razor-sharp focus on eyes, 8k"
-        },
-        "style_retro": {
-            "title": "🎞 Retro Film 90s",
-            "prompt": "Authentic 90s vintage film photography waist-up medium portrait snapshot of the man from the input images outdoors in city, warm sunset glow in the background sky, natural balanced lighting on the face, shot on Contax T2, Kodak Portra 400 film grain, casual unposed moment, genuine facial expressions, nostalgic timeless look"
         }
     }
 
     selected_style = styles.get(style_choice)
     user_photos = user_data_store[user_id]['photos']
 
-    # Повідомлення про початок генерації надсилаємо окремо
     await context.bot.send_message(
         chat_id=user_id,
         text=f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n⏳ Створюємо шедевр через Flux.2 Pro (це займе близько 20-30 секунд)...",
@@ -277,7 +275,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Стабільний бот з робочими кнопками запущено успішно...")
+    print("🚀 Повний сет із 6 ідеальних стилів запущено...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
