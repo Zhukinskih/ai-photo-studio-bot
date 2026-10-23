@@ -116,9 +116,9 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [Replicate Img2Img] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо модель sdxl-img2img із точним параметром image
+        # Використовуємо загальний рядок моделі без застарілого хешу версії
         output = replicate.run(
-            "stability-ai/sdxl-img2img:e896472342e13f3b9c7fa25368a5f806934c9d1df6437704870c57c4c47b593a",
+            "stability-ai/sdxl-img2img",
             input={
                 "image": user_photo_url,
                 "prompt": selected_style["prompt"],
