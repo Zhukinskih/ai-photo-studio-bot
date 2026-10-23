@@ -92,7 +92,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "luxurious aesthetic high-fashion portrait of this person on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
+            "prompt": "luxurious aesthetic high-fashion portrait on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
@@ -116,24 +116,20 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [Replicate] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо офіційну актуальну модель SDXL із підтримкою вхідного зображення
+        # Використовуємо сучасну модель із каталогу Replicate
         output = replicate.run(
-            "stability-ai/sdxl",
+            "prunaai/p-image",
             input={
                 "image": user_photo_url,
-                "prompt": selected_style["prompt"],
-                "negative_prompt": "ugly, blurry, low quality, distorted face, deformed",
-                "prompt_strength": 0.7,
-                "width": 768,
-                "height": 1024,
-                "num_outputs": 1
+                "prompt": selected_style["prompt"]
             }
         )
 
         print(f"✅ [Replicate] Успішно отримано результат: {output}")
 
-        if output and len(output) > 0:
-            image_url = output[0]
+        if output:
+            # Деякі моделі повертають рядок або список, обробляємо обидва варіанти
+            image_url = output[0] if isinstance(output, list) else output
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=image_url,
