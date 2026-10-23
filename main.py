@@ -185,7 +185,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         },
         "style_glamour": {
             "title": "✨ Пентхаус Манхеттен",
-            "prompt": "Cinematic high-end corporate waist-up medium portrait of the man from the input images standing by floor-to-ceiling windows of a luxury Manhattan skyscraper penthouse, dramatic warm sunset city skyline bokeh strictly on the background, soft neutral indoor lighting on the subject's face, natural realistic skin tones, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/1.4, magazine cover aesthetic"
+            "prompt": "Cinematic high-end corporate waist-up medium portrait of the man from the input images standing inside a luxury Manhattan skyscraper penthouse by massive floor-to-ceiling glass windows, iconic recognizable New York City skyline with famous skyscrapers and glowing evening lights clearly visible and detailed on the background, warm golden hour sunset illuminating the urban architecture, soft neutral indoor lighting on the subject's face, natural realistic skin tones, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/4, crisp architectural background details, magazine cover aesthetic"
         },
         "style_cafe": {
             "title": "☕️ Вуличне кафе (Париж)",
