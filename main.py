@@ -89,18 +89,19 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("❌ Будь ласка, спочатку надішли своє селфі за допомогою команди /start.")
         return
 
+    # Оновлені промпти з акцентом на абсолютну фотореалістичність та природну текстуру шкіри
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "a photo of a man img, luxurious aesthetic high-fashion portrait on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
+            "prompt": "RAW photo, a handsome man img on a tropical beach at sunset, turquoise ocean, natural skin texture, pores, professional DSLR photography, 35mm lens, shot on Canon, 8k resolution, photorealistic"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
-            "prompt": "a photo of a man img, luxury mountain retreat photoshoot, elegant person in a cozy winter chalet, snowy peaks background, high-end fashion magazine style, 8k"
+            "prompt": "RAW photo, a handsome man img in a cozy winter chalet, snowy peaks background, natural skin texture, realistic lighting, professional photography, DSLR, 8k, highly detailed, photorealistic"
         },
         "style_glamour": {
             "title": "✨ Вечірній шик",
-            "prompt": "a photo of a man img, high-end glamour photoshoot in a luxury penthouse, elegant evening wear, cinematic lighting, professional studio portraits, 8k"
+            "prompt": "RAW photo, a handsome man img in a luxury penthouse, elegant evening wear, cinematic lighting, natural skin texture, professional portrait photography, 8k, photorealistic"
         }
     }
 
@@ -109,20 +110,19 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ ШІ створює твою фотосесію за допомогою PhotoMaker (це займе ~30-40 секунд)...",
+        f"⏳ ШІ створює фотореалістичну фотосесію (це займе ~30-40 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
         print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо точний свіжий хеш версії з пітонівського прикладу API
         output = replicate.run(
             "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
             input={
                 "input_image": user_photo_url,
                 "prompt": selected_style["prompt"],
-                "negative_prompt": "ugly, blurry, low quality, distorted face, deformed, bad anatomy",
+                "negative_prompt": "cartoon, illustration, painting, drawing, art, 3d render, anime, blurry, low quality, distorted face, deformed, bad anatomy, plastic skin",
                 "num_steps": 50,
                 "num_outputs": 1
             }
@@ -131,14 +131,13 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [Replicate] Успішно отримано результат: {output}")
 
         if output:
-            # Обробка результату з урахуванням об'єктів файлів Replicate
             image_item = output[0]
             image_url = image_item.url if hasattr(image_item, 'url') else str(image_item)
             
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=image_url,
-                caption=f"✨ Твоя фотосесія у стилі **{selected_style['title']}** готова!",
+                caption=f"✨ Твоя реалістична фотосесія у стилі **{selected_style['title']}** готова!",
                 parse_mode='Markdown'
             )
         else:
