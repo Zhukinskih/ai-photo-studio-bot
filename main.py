@@ -114,7 +114,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     )
 
     try:
-        # Крок 1: Генеруємо якісне базове фото через Flux Schnell
+        # Крок 1: Генеруємо якісне базове фото через Flux Schnell з прив'язкою повної назви
         print(f"🚀 [Gen] Генеруємо базове зображення для стилю: {selected_style['title']}")
         base_output = replicate.run(
             "black-forest-labs/flux-schnell",
@@ -134,7 +134,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             text=f"⏳ Крок 2/2: Переносимо твоє обличчя за допомогою Face Swap..."
         )
 
-        # Крок 2: Точна заміна обличчя з чітко заданим хешем версії
+        # Крок 2: Точна заміна обличчя
         print(f"🚀 [FaceSwap] Запуск заміни обличчя...")
         swap_output = replicate.run(
             "cdingram/face-swap:d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
