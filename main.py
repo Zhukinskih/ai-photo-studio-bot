@@ -235,10 +235,12 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             ]
             post_reply_markup = InlineKeyboardMarkup(post_action_keyboard)
 
-            await context.bot.send_photo(
+            # Надсилаємо як файл (документ) з розширенням .jpg — Telegram покаже прев'ю, але не пережме до 180КБ
+            await context.bot.send_document(
                 chat_id=user_id,
-                photo=str(final_image_url),
-                caption=f"🔥 Твоя приголомшлива фотосесія у стилі **{selected_style['title']}** готова! Готуй лайки в соцмережах 😉",
+                document=str(final_image_url),
+                filename=f"photo_{style_choice}.jpg",
+                caption=f"🔥 Твоя фотосесія у стилі **{selected_style['title']}** готова! (Оригінал у максимальній якості)",
                 reply_markup=post_reply_markup,
                 parse_mode='Markdown'
             )
@@ -275,7 +277,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Повний сет із 6 ідеальних стилів запущено...")
+    print("🚀 Бот увімкнено та готовий до роботи...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
