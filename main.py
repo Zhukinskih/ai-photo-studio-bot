@@ -48,7 +48,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio Pro!** ✨\n\n"
         "Створимо твою професійну фотосесію за допомогою передової моделі Flux.2 Pro.\n\n"
-        "📸 **Будь ласка, надішли 3 різні чіткі селфі** (по черзі), щоб нейромережа ідеально запам'язала твої риси обличчя під різними кутами.\n\n"
+        "📸 **Будь ласка, надішли 3 різні чіткі селфі** (по черзі), щоб нейромережа ідеально запам'ятала твої риси обличчя під різними кутами.\n\n"
         "Завантажено фото: **0 / 3**"
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
@@ -108,18 +108,19 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("❌ Будь ласка, спочатку надішли 3 селфі за допомогою команди /start.")
         return
 
+    # Оновлені професійні промпти з акцентом на природність, пори та плівкову текстуру (без "пластику")
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "Commercial editorial fashion photography of the man from the input images on a luxury tropical beach resort at golden hour, turquoise crystal clear ocean background, shot on Hasselblad 100MP, 50mm lens, f/1.8, cinematic soft sunlight, natural skin texture with subtle pores, high-end travel magazine aesthetic, 8k resolution, photorealistic"
+            "prompt": "Raw unfiltered candid editorial photography of the man from the input images on a tropical beach at sunset, authentic skin imperfections, visible pores, natural skin texture, slight sweat, unstyled messy hair blowing in the wind, shot on 35mm film, Kodak Portra 400, Fujifilm color science, authentic documentary style, zero AI smoothness"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
-            "prompt": "High-end lifestyle magazine photography, the man from the input images standing inside a luxury alpine wooden chalet, floor-to-ceiling panoramic windows overlooking majestic snowy mountain peaks, moody natural daylight, shot on Sony A7R V, 35mm lens, architectural digest style, premium fabric textures, hyper-detailed, 8k"
+            "prompt": "Raw unfiltered candid lifestyle photography of the man from the input images inside an alpine wooden chalet, natural unpolished skin texture, visible pores, subtle stubble, authentic facial asymmetry, casual pose, shot on Leica M10, 50mm lens, natural window daylight, documentary photography, no plastic skin"
         },
         "style_glamour": {
             "title": "✨ Вечірній шик",
-            "prompt": "High-end corporate executive portrait, the man from the input images in a luxury high-rise penthouse overlooking a night city skyline, wearing an impeccably tailored charcoal grey tuxedo, moody cinematic rim lighting, dramatic shadows, shot on Leica S3, 85mm lens, f/1.2, sharp focus, professional color grading, magazine cover style, 8k"
+            "prompt": "Raw unfiltered corporate portrait of the man from the input images in a luxury penthouse, wearing a charcoal grey suit, authentic skin texture with natural pores and tiny imperfections, realistic micro-details, shot on Sony Alpha 1, natural indoor ambient light, professional editorial journalism style, zero CGI look"
         }
     }
 
