@@ -43,7 +43,7 @@ user_data_store = {}
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio!** ✨\n\n"
-        "Я допоможу тобі перетворити твоє селфі на розкішну фотосесію за допомогою штучного інтелекту.\n\n"
+        "Я допоможу тобі перетворити твоє селфі на розкішну фотосесію зі збереженням твого обличчя.\n\n"
         "📸 **Будь ласка, надішли 1 чітке селфі**, де добре видно твоє обличчя."
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
@@ -77,7 +77,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- Обробка вибору стилю та запуск Replicate ---
+# --- Обробка вибору стилю та запуск PhotoMaker ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -92,15 +92,15 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "luxurious aesthetic high-fashion portrait on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
+            "prompt": "a photo of a man img, luxurious aesthetic high-fashion portrait on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
-            "prompt": "luxury mountain retreat photoshoot, elegant person in a cozy winter chalet, snowy peaks background, high-end fashion magazine style, 8k"
+            "prompt": "a photo of a man img, luxury mountain retreat photoshoot, elegant person in a cozy winter chalet, snowy peaks background, high-end fashion magazine style, 8k"
         },
         "style_glamour": {
             "title": "✨ Вечірній шик",
-            "prompt": "high-end glamour photoshoot in a luxury penthouse, elegant evening wear, cinematic lighting, professional studio portraits, 8k"
+            "prompt": "a photo of a man img, high-end glamour photoshoot in a luxury penthouse, elegant evening wear, cinematic lighting, professional studio portraits, 8k"
         }
     }
 
@@ -109,26 +109,28 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ ШІ обробляє твоє селфі та створює фотосесію (це займе ~30-40 секунд)...",
+        f"⏳ ШІ створює твою фотосесію за допомогою PhotoMaker (це займе ~30-40 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
-        print(f"🚀 [Replicate] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
+        print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо сучасну модель із каталогу Replicate
+        # Використовуємо офіційну модель PhotoMaker, яка точно прив'язує обличчя до ключового слова "img" у промпті
         output = replicate.run(
-            "prunaai/p-image",
+            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918ae4d9f6e57028d523f4bb8461f9f03253",
             input={
-                "image": user_photo_url,
-                "prompt": selected_style["prompt"]
+                "input_image": user_photo_url,
+                "prompt": selected_style["prompt"],
+                "negative_prompt": "ugly, blurry, low quality, distorted face, deformed, bad anatomy",
+                "style_strength_ratio": 20,
+                "num_outputs": 1
             }
         )
 
         print(f"✅ [Replicate] Успішно отримано результат: {output}")
 
         if output:
-            # Деякі моделі повертають рядок або список, обробляємо обидва варіанти
             image_url = output[0] if isinstance(output, list) else output
             await context.bot.send_photo(
                 chat_id=user_id,
@@ -144,7 +146,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         logging.error(f"Replicate Error: {e}")
         await context.bot.send_message(
             chat_id=user_id, 
-            text=f"⚠️ Помилка обробки фото: {str(e)}"
+            text=f"⚠️ Помилка обробки обличчя: {str(e)}"
         )
 
 def main():
@@ -170,7 +172,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій запущений...")
+    print("🚀 Бот для ШІ-фотосесій з PhotoMaker запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
