@@ -4,7 +4,7 @@ import asyncio
 import replicate
 from flask import Flask
 from threading import Thread
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -47,6 +47,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📸 **Будь ласка, надішли 1 чітке селфі**, де добре видно твоє обличчя."
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
+
+# --- Встановлення кнопки Menu / Start у Telegram ---
+async def post_init(application):
+    await application.bot.set_my_commands([
+        BotCommand("start", "Запустити бота та створити фотосесію")
+    ])
 
 # --- Обробка завантаженого фото ---
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -110,14 +116,13 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [Replicate Img2Img] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо офіційну модель SDXL з параметром image для Image-to-Image
         output = replicate.run(
             "stability-ai/sdxl:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438",
             input={
                 "image": user_photo_url,
                 "prompt": selected_style["prompt"],
                 "negative_prompt": "ugly, blurry, low quality, distorted face, deformed",
-                "prompt_strength": 0.65,  # Зберігає риси твого обличчя, але додає стиль
+                "prompt_strength": 0.65,
                 "width": 768,
                 "height": 1024,
                 "num_outputs": 1
@@ -162,13 +167,13 @@ def main():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    app_bot = ApplicationBuilder().token(TOKEN).build()
+    app_bot = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
     app_bot.add_handler(CommandHandler("start", start_command))
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій Image-to-Image запущений...")
+    print("🚀 Бот для ШІ-фотосесій з кнопкою меню запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
