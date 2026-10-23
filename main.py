@@ -109,20 +109,20 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ Крок 1/2: Генеруємо базове фото...",
+        f"⏳ Крок 1/2: Генеруємо базове фото за допомогою SDXL...",
         parse_mode='Markdown'
     )
 
     try:
-        # Крок 1: Генеруємо якісне базове фото через Flux Schnell з точним хешем версії
-        print(f"🚀 [Gen] Генеруємо базове зображення для стилю: {selected_style['title']}")
+        # Крок 1: Генеруємо якісний фон через SDXL (text-to-image)
+        print(f"🚀 [Gen] Генеруємо базове зображення через SDXL для стилю: {selected_style['title']}")
         base_output = replicate.run(
-            "black-forest-labs/flux-schnell:f5ab57827e852934ff2d23e595e0c5ccf0d8a1789c670a256dfd8a8b16347895",
+            "stability-ai/sdxl:3392760264943fb64155d042b8480397163f53387842135651f743915352c842",
             input={
                 "prompt": selected_style["prompt"],
                 "num_outputs": 1,
-                "aspect_ratio": "4:5",
-                "output_format": "jpg"
+                "width": 768,
+                "height": 960
             }
         )
 
@@ -188,7 +188,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот з двокроковим Face Swap запущений...")
+    print("🚀 Бот з SDXL та Face Swap запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
