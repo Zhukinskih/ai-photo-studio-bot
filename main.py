@@ -88,9 +88,9 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if photo_url:
         user_data_store[user_id]['photos'].append(photo_url)
     
-    total_photos = len(user_data_store[user_id]['photos'])
+    sources_count = len(user_data_store[user_id]['photos'])
 
-    if total_photos >= 3:
+    if sources_count >= 3:
         keyboard = [
             [
                 InlineKeyboardButton("🏔 Панорама Альп", callback_data="style_mountain"),
@@ -108,19 +108,19 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            f"🎉 Отримано фото: **{total_photos}**. Успішно збережено!\n\n"
+            f"🎉 Отримано фото: **{sources_count}**. Успішно збережено!\n\n"
             "Тепер обери стиль для твоєї фотосесії:",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
     else:
         await update.message.reply_text(
-            f"✅ Фото прийнято (загалом: {total_photos}/3). Додай ще кілька, щоб зібрати мінімум 3 референси.",
+            f"✅ Фото прийнято (загалом: {sources_count}/3). Додай ще кілька, щоб зібрати мінімум 3 референси.",
             parse_mode='Markdown'
         )
 
 # --- Функція для виведення меню стилів ---
-async def show_styles_menu(update_or_query, context, user_id):
+async def show_styles_menu(chat_id, context):
     keyboard = [
         [
             InlineKeyboardButton("🏔 Панорама Альп", callback_data="style_mountain"),
@@ -136,12 +136,12 @@ async def show_styles_menu(update_or_query, context, user_id):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    text = "🎨 Обери стиль для наступної фотосесії:"
-
-    if hasattr(update_or_query, 'message') and update_or_query.message:
-        await update_or_query.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-    else:
-        await context.bot.send_message(chat_id=user_id, text=text, reply_markup=reply_markup, parse_mode='Markdown')
+    await context.bot.send_message(
+        chat_id=chat_id, 
+        text="🎨 Обери стиль для твоєї фотосесії:", 
+        reply_markup=reply_markup, 
+        parse_mode='Markdown'
+    )
 
 # --- Обробка вибору стилю та асинхронна генерація через Flux-2-Pro ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -149,29 +149,29 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     user_id = query.from_user.id
     data = query.data
 
+    await query.answer()
+
+    # Перевірка на кнопки посткабінету
     if data == "action_change_style":
-        await query.answer()
         if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
-            await query.edit_message_text("❌ Спочатку завантаж фото через /start.")
+            await context.bot.send_message(chat_id=user_id, text="❌ Спочатку завантаж фото через /start.")
             return
-        await query.edit_message_text("🎨 Обери новий стиль для твоїх поточних фото:")
-        await show_styles_menu(query, context, user_id)
+        await show_styles_menu(user_id, context)
         return
 
     if data == "action_new_photos":
-        await query.answer()
         user_data_store[user_id] = {'photos': []}
-        await query.edit_message_text(
-            "🔄 Сеанс скинуто.\n\n"
-            "📸 Надішли **3-4 нові фото (по груди)**, щоб почати спочатку."
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="🔄 Сеанс скинуто.\n\n📸 Надішли **3-4 нові фото (по груди)** пачкою або файлами, щоб почати спочатку.",
+            parse_mode='Markdown'
         )
         return
 
-    await query.answer()
     style_choice = data
 
     if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
-        await query.edit_message_text("❌ Будь ласка, спочатку завантаж щонайменше 3 фото за допомогою команди /start.")
+        await context.bot.send_message(chat_id=user_id, text="❌ Будь ласка, спочатку завантаж щонайменше 3 фото за допомогою команди /start.")
         return
 
     styles = {
@@ -204,16 +204,16 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     selected_style = styles.get(style_choice)
     user_photos = user_data_store[user_id]['photos']
 
-    await query.edit_message_text(
-        f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ Створюємо шедевр через Flux.2 Pro (це займе близько 20-30 секунд)...",
+    # Повідомлення про початок генерації надсилаємо окремо
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n⏳ Створюємо шедевр через Flux.2 Pro (це займе близько 20-30 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
         print(f"🚀 [Flux-2-Pro] Початок генерації для стилю: {selected_style['title']}")
         
-        # Використовуємо asyncio.to_thread, щоб не блокувати головний потік бота під час запиту до Replicate
         output = await asyncio.to_thread(
             replicate.run,
             "black-forest-labs/flux-2-pro",
@@ -277,7 +277,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Стабільний асинхронний бот запущено успішно...")
+    print("🚀 Стабільний бот з робочими кнопками запущено успішно...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
