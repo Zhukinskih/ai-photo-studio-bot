@@ -110,6 +110,15 @@ def main():
         print("❌ Помилка: Змінна TELEGRAM_TOKEN не знайдена!")
         exit(1)
 
+    # Примусово створюємо цикл подій для Python 3.14+
+    try:
+        loop = asyncio.get_event_loop_policy().get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError()
+    except Exception:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     app_bot = ApplicationBuilder().token(TOKEN).build()
 
     app_bot.add_handler(CommandHandler("start", start_command))
@@ -117,19 +126,7 @@ def main():
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
     print("🚀 Бот для ШІ-фотосесій запущений...")
-    
-    # Сумісний запуск для нових версій Python
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop and loop.is_running():
-        # Якщо цикл вже є
-        app_bot.run_polling()
-    else:
-        # Для ізольованих потоків
-        app_bot.run_polling()
+    app_bot.run_polling()
 
 if __name__ == '__main__':
     main()
