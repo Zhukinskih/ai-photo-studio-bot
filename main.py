@@ -105,7 +105,7 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [
                 InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
-                InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+                InlineKeyboardButton("☕️ Терраса в Італії", callback_data="style_cafe")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -135,7 +135,7 @@ async def show_styles_menu(chat_id, context):
         ],
         [
             InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
-            InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+            InlineKeyboardButton("☕️ Терраса в Італії", callback_data="style_cafe")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -151,12 +151,10 @@ def convert_to_jpeg(image_url):
     response = requests.get(image_url)
     img = Image.open(io.BytesIO(response.content))
     
-    # Конвертуємо у RGB (якщо це була RGBA або WebP з прозорістю)
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
         
     output_buffer = io.BytesIO()
-    # Зберігаємо у високій якості JPEG (quality=95)
     img.save(output_buffer, format="JPEG", quality=95)
     output_buffer.seek(0)
     return output_buffer
@@ -202,7 +200,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         },
         "style_island": {
             "title": "🌴 Тропічний Острів (Paradise Beach)",
-            "prompt": "High-end travel magazine waist-up portrait of the man from the input images standing relaxed waist-deep in crystal-clear turquoise tropical ocean water near a white sandy shore, warm golden hour sun glowing in the sky, lush tropical green islands and pristine palm trees beach clearly visible on the background, soft natural bright daylight illuminating the face with accurate natural skin tones and slightly wet slicked hair, relaxed natural pose looking into the camera, wearing minimalist swimwear, shot on Sony Alpha 1, 35mm wide lens, zero plastic look, visible micro-pores, natural water droplets on skin, photorealistic"
+            "prompt": "High-end travel magazine waist-up portrait of the man from the input images standing relaxed waist-deep in crystal-clear turquoise tropical ocean water near a white sandy shore, warm golden hour sun glowing in the sky, realistic natural body physique with soft natural definition, natural palm trees and soft out-of-focus tropical coast on the background, soft natural bright daylight illuminating the face with accurate natural skin tones, relaxed natural pose looking into the camera, wearing minimalist swimwear, shot on Sony Alpha 1, 35mm lens, natural unpolished skin texture, photorealistic"
         },
         "style_supercar": {
             "title": "🏎️ Суперкар Монако",
@@ -213,8 +211,8 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             "prompt": "Cinematic high-end corporate waist-up medium portrait of the man from the input images standing inside a luxury Manhattan skyscraper penthouse by massive floor-to-ceiling glass windows, iconic recognizable New York City skyline with famous skyscrapers and glowing evening lights clearly visible and detailed on the background, warm golden hour sunset illuminating the urban architecture, soft neutral indoor lighting on the subject's face, natural realistic skin tones, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/4, crisp architectural background details, magazine cover aesthetic"
         },
         "style_cafe": {
-            "title": "☕️ Вуличне кафе (Париж)",
-            "prompt": "Candid documentary style waist-up medium portrait of the man from the input images sitting at an outdoor terrace of a chic Parisian cafe, holding a coffee cup, soft overcast neutral daylight on the face, warm golden hour sunset glow reflecting softly on European street buildings in the deep background, wearing a stylish minimalist black hoodie, shot on Fujifilm X-T5, 35mm lens, natural skin texture"
+            "title": "☕️ Терраса в Італії (Amalfi Coast)",
+            "prompt": "Candid travel lifestyle waist-up medium portrait of the man from the input images sitting at an outdoor cafe terrace overlooking the stunning Amalfi coast in Italy, holding an espresso cup, beautiful classic Italian architecture and Mediterranean buildings sharply visible on the background, warm golden hour sunlight, wearing a smart casual linen shirt, shot on Leica M11, 35mm lens, natural realistic skin texture, photorealistic"
         }
     }
 
@@ -245,7 +243,6 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [Flux-2-Pro] Успішно створено: {final_image_url}")
 
         if final_image_url:
-            # Конвертуємо отриманий файл у реальний JPEG через Pillow в окремому потоці
             jpeg_file = await asyncio.to_thread(convert_to_jpeg, final_image_url)
 
             post_action_keyboard = [
@@ -256,7 +253,6 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             ]
             post_reply_markup = InlineKeyboardMarkup(post_action_keyboard)
 
-            # Надсилаємо готовий конвертований файл .jpg як документ
             await context.bot.send_document(
                 chat_id=user_id,
                 document=jpeg_file,
@@ -298,7 +294,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот з примусовою конвертацією у JPEG запущено...")
+    print("🚀 Оновлений бот із покращеними стилями та конвертацією запущено...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
