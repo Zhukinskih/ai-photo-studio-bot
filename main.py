@@ -48,7 +48,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✨ **Вітаю в AI Photo Studio Pro!** ✨\n\n"
         "Створимо твою розкішну професійну фотосесію рівня глянцевих журналів за допомогою передової моделі Flux.2 Pro.\n\n"
         "📸 **Як підготувати фото для ідеального результату:**\n"
-        "• Завантаж **3-4 різні фото** (оптимально у форматі **по груди**).\n"
+        "• Завантаж **3-4 різні фото** у форматі **по груди** (середній план).\n"
         "• Одне — дивлячись прямо в камеру, інші — під невеликим кутом.\n"
         "• Чітке освітлення, без темних кімнат чи розмиття.\n\n"
         "👇 **Просто надішли ці фото сюди одразу пачкою (альбомом)**, і ми почнемо!"
@@ -105,43 +105,88 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
+# --- Функція для виведення меню стилів (використовується повторно) ---
+async def show_styles_menu(update_or_query, context, user_id):
+    keyboard = [
+        [
+            InlineKeyboardButton("🏔 Панорама Альп", callback_data="style_mountain"),
+            InlineKeyboardButton("🛥 Яхта в океані", callback_data="style_beach")
+        ],
+        [
+            InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
+            InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+        ],
+        [
+            InlineKeyboardButton("💼 Executive Портрет", callback_data="style_linkedin"),
+            InlineKeyboardButton("🎞 Retro Film 90s", callback_data="style_retro")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    text = "🎨 Обери стиль для наступної фотосесії:"
+
+    if hasattr(update_or_query, 'message') and update_or_query.message:
+        await update_or_query.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+    else:
+        await context.bot.send_message(chat_id=user_id, text=text, reply_markup=reply_markup, parse_mode='Markdown')
+
 # --- Обробка вибору стилю та генерація через Flux-2-Pro ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-
     user_id = query.from_user.id
-    style_choice = query.data
+    data = query.data
+
+    # Перевірка на кнопки посткабінету (зміна стилю або нові фото)
+    if data == "action_change_style":
+        await query.answer()
+        if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
+            await query.edit_message_text("❌ Спочатку завантаж фото через /start.")
+            return
+        await query.edit_message_text("🎨 Обери новий стиль для твоїх поточних фото:")
+        await show_styles_menu(query, context, user_id)
+        return
+
+    if data == "action_new_photos":
+        await query.answer()
+        user_data_store[user_id] = {'photos': []}
+        await query.edit_message_text(
+            "🔄 Сеанс скинуто.\n\n"
+            "📸 Надішли **3-4 нові фото (по груди)** пачкою (альбомом), щоб почати спочатку."
+        )
+        return
+
+    # Логіка генерації фото за обраним стилем
+    await query.answer()
+    style_choice = data
 
     if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
         await query.edit_message_text("❌ Будь ласка, спочатку завантаж щонайменше 3 фото за допомогою команди /start.")
         return
 
-    # 6 трендових промптів без «пластику» з панорамними локаціями
+    # Оновлені промпти: план по пояс (waist-up), м'яке природне світло на обличчі, а захід сонця виключно на задньому плані
     styles = {
         "style_mountain": {
             "title": "🏔 Панорама Альп (Quiet Luxury)",
-            "prompt": "Stunning high-end editorial lifestyle photography ofന്ത് the man from the input images standing on a modern glass balcony of an architectural alpine chalet, breathtaking majestic snowy mountain peaks panorama in the background, golden hour sunset light, wearing a premium cashmere crewneck sweater, shot on Hasselblad 100MP, 35mm lens, natural unpolished skin texture, visible micro-pores, authentic documentary look, 8k, photorealistic"
+            "prompt": "High-end editorial waist-up medium portrait of the man from the input images standing on a modern glass balcony of an architectural alpine chalet, breathtaking majestic snowy mountain peaks panorama bathed in soft golden hour sunset light strictly on the background, natural neutral front daylight illuminating the subject's face with accurate skin tones, wearing a premium cashmere crewneck sweater, shot on Hasselblad 100MP, 35mm lens, natural unpolished skin texture, visible micro-pores, 8k, photorealistic"
         },
         "style_beach": {
             "title": "🛥 Яхта в океані (Superyacht)",
-            "prompt": "High-end luxury travel magazine photography of the man from the input images relaxing on the deck of a modern superyacht, crystal clear turquoise open ocean panorama stretching to the horizon, bright sunny day, soft sea breeze blowing messy hair, wearing a stylish unbuttoned white linen shirt, shot on Leica S3, 50mm lens, natural skin texture, zero plastic look, 8k resolution"
+            "prompt": "High-end luxury travel magazine waist-up medium portrait of the man from the input images relaxing on the deck of a modern superyacht, crystal clear turquoise open ocean panorama with a soft warm sunset glowing far on the horizon background, natural bright daytime light on the subject's face, accurate natural skin tones, wearing a stylish unbuttoned white linen shirt, shot on Leica S3, 50mm lens, zero plastic look, 8k resolution"
         },
         "style_glamour": {
             "title": "✨ Пентхаус Манхеттен",
-            "prompt": "Cinematic high-end corporate portrait of the man from the input images standing by floor-to-ceiling windows of a luxury Manhattan skyscraper penthouse, dramatic night city skyline bokeh background, moody atmospheric rim lighting, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/1.4, sharp focus, natural skin pores, magazine cover aesthetic"
+            "prompt": "Cinematic high-end corporate waist-up medium portrait of the man from the input images standing by floor-to-ceiling windows of a luxury Manhattan skyscraper penthouse, dramatic warm sunset city skyline bokeh strictly on the background, soft neutral indoor lighting on the subject's face, natural realistic skin tones, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/1.4, magazine cover aesthetic"
         },
         "style_cafe": {
             "title": "☕️ Вуличне кафе (Париж)",
-            "prompt": "Candid documentary style street photography of the man from the input images sitting at an outdoor terrace of a chic Parisian cafe, holding a coffee cup, soft overcast daylight, blurred romantic European street background, wearing a stylish minimalist black hoodie, shot on Fujifilm X-T5, 35mm lens, natural skin texture, authentic lifestyle editorial"
+            "prompt": "Candid documentary style waist-up medium portrait of the man from the input images sitting at an outdoor terrace of a chic Parisian cafe, holding a coffee cup, soft overcast neutral daylight on the face, warm golden hour sunset glow reflecting softly on European street buildings in the deep background, wearing a stylish minimalist black hoodie, shot on Fujifilm X-T5, 35mm lens, natural skin texture"
         },
         "style_linkedin": {
             "title": "💼 Executive Портрет",
-            "prompt": "Professional executive corporate headshot of the man from the input images inside a modern high-end architectural office, soft natural window light, confident calm expression, wearing a tailored navy blazer and crisp white shirt, shot on Sony A7R V, 85mm lens, razor-sharp focus on eyes, natural skin texture, Forbes magazine cover style, 8k"
+            "prompt": "Professional executive corporate waist-up headshot of the man from the input images inside a modern high-end architectural office, warm sunset city lights blurred far on the background through panoramic windows, soft natural neutral window light on the face for clean skin tones, confident calm expression, wearing a tailored navy blazer and crisp white shirt, shot on Sony A7R V, 85mm lens, razor-sharp focus on eyes, 8k"
         },
         "style_retro": {
             "title": "🎞 Retro Film 90s",
-            "prompt": "Authentic 90s vintage film photography snapshot of the man from the input images outdoors in city, shot on Contax T2, Kodak Portra 400 film grain, natural imperfect lighting, casual unposed candid moment, genuine facial expressions, zero AI smoothness, nostalgic timeless look"
+            "prompt": "Authentic 90s vintage film photography waist-up medium portrait snapshot of the man from the input images outdoors in city, warm sunset glow in the background sky, natural balanced lighting on the face, shot on Contax T2, Kodak Portra 400 film grain, casual unposed moment, genuine facial expressions, nostalgic timeless look"
         }
     }
 
@@ -171,10 +216,20 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [Flux-2-Pro] Успішно створено: {final_image_url}")
 
         if final_image_url:
+            # Клавіатура під готовим результатом для зручного UX
+            post_action_keyboard = [
+                [
+                    InlineKeyboardButton("🎨 Обрати інший стиль", callback_data="action_change_style"),
+                    InlineKeyboardButton("🔄 Завантажити нові фото", callback_data="action_new_photos")
+                ]
+            ]
+            post_reply_markup = InlineKeyboardMarkup(post_action_keyboard)
+
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=str(final_image_url),
                 caption=f"🔥 Твоя приголомшлива фотосесія у стилі **{selected_style['title']}** готова! Готуй лайки в соцмережах 😉",
+                reply_markup=post_reply_markup,
                 parse_mode='Markdown'
             )
         else:
@@ -210,7 +265,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Повноцінний бот на базі Flux.2 Pro запущено успішно...")
+    print("🚀 Оновлений бот із виправленим світлом та UX запущено...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
