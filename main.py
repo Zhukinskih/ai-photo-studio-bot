@@ -36,48 +36,67 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Словник для тимчасового збереження даних користувача
+# Словник для тимчасового збереження даних користувача та його референсів
 user_data_store = {}
 
 # --- Команда /start ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    # Скидаємо/ініціалізуємо список фото для нового сеансу
+    user_data_store[user_id] = {'photos': []}
+    
     welcome_text = (
-        "✨ **Вітаю в AI Photo Studio!** ✨\n\n"
-        "Я допоможу тобі створити круту фотосесію із точним перенесенням твого обличчя.\n\n"
-        "📸 **Будь ласка, надішли 1 чітке селфі**, де добре видно твоє обличчя."
+        "✨ **Вітаю в AI Photo Studio Pro!** ✨\n\n"
+        "Створимо твою професійну фотосесію за допомогою передової моделі Flux.2 Pro.\n\n"
+        "📸 **Будь ласка, надішли 3 різні чіткі селфі** (по черзі), щоб нейромережа ідеально запам'язала твої риси обличчя під різними кутами.\n\n"
+        "Завантажено фото: **0 / 3**"
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
 # --- Встановлення кнопки Menu / Start у Telegram ---
 async def post_init(application):
     await application.bot.set_my_commands([
-        BotCommand("start", "Запустити бота та створити фотосесію")
+        BotCommand("start", "Запустити бота та почати фотосесію")
     ])
 
-# --- Обробка завантаженого фото ---
+# --- Обробка завантажених фото (збираємо до 3 штук) ---
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    photo_file = update.message.photo[-1]
     
+    if user_id not in user_data_store:
+        user_data_store[user_id] = {'photos': []}
+
+    photo_file = update.message.photo[-1]
     file = await context.bot.get_file(photo_file.file_id)
     photo_url = file.file_path
 
-    user_data_store[user_id] = {'photo_url': photo_url}
-    
-    keyboard = [
-        [InlineKeyboardButton("🌴 Тропічний пляж", callback_data="style_beach")],
-        [InlineKeyboardButton("🏔 Гірське шале", callback_data="style_mountain")],
-        [InlineKeyboardButton("✨ Вечірній шик", callback_data="style_glamour")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    # Додаємо фото у список референсів користувача
+    user_data_store[user_id]['photos'].append(photo_url)
+    current_count = len(user_data_store[user_id]['photos'])
 
-    await update.message.reply_text(
-        "📸 **Селфі успішно збережено!** Тепер оберемо стиль для твоєї фотосесії:",
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
-    )
+    if current_count < 3:
+        await update.message.reply_text(
+            f"✅ Фото #{current_count} прийнято!\n"
+            f"Будь ласка, надішли ще **{3 - current_count}** фото.",
+            parse_mode='Markdown'
+        )
+    else:
+        # Коли зібрано всі 3 фото, показуємо меню вибору стилів
+        keyboard = [
+            [InlineKeyboardButton("🌴 Тропічний пляж (Editorial)", callback_data="style_beach")],
+            [InlineKeyboardButton("🏔 Гірське шале (Lifestyle)", callback_data="style_mountain")],
+            [InlineKeyboardButton("✨ Вечірній шик (Dark Moody)", callback_data="style_glamour")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-# --- Обробка вибору стилю та запуск генерації + Face Swap ---
+        await update.message.reply_text(
+            "🎉 **Усі 3 референси успішно збережено!**\n\n"
+            "Тепер обери стиль для твоєї професійної фотосесії:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+# --- Обробка вибору стилю та генерація через Flux-2-Pro ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -85,84 +104,60 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     user_id = query.from_user.id
     style_choice = query.data
 
-    if user_id not in user_data_store or 'photo_url' not in user_data_store[user_id]:
-        await query.edit_message_text("❌ Будь ласка, спочатку надішли своє селфі за допомогою команди /start.")
+    if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
+        await query.edit_message_text("❌ Будь ласка, спочатку надішли 3 селфі за допомогою команди /start.")
         return
 
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "RAW photo, a handsome man on a tropical beach at sunset, turquoise ocean, natural skin texture, professional DSLR photography, 35mm lens, 8k, photorealistic"
+            "prompt": "Commercial editorial fashion photography of the man from the input images on a luxury tropical beach resort at golden hour, turquoise crystal clear ocean background, shot on Hasselblad 100MP, 50mm lens, f/1.8, cinematic soft sunlight, natural skin texture with subtle pores, high-end travel magazine aesthetic, 8k resolution, photorealistic"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
-            "prompt": "RAW photo, a handsome man in a cozy winter chalet, snowy peaks background, natural skin texture, professional photography, DSLR, 8k, photorealistic"
+            "prompt": "High-end lifestyle magazine photography, the man from the input images standing inside a luxury alpine wooden chalet, floor-to-ceiling panoramic windows overlooking majestic snowy mountain peaks, moody natural daylight, shot on Sony A7R V, 35mm lens, architectural digest style, premium fabric textures, hyper-detailed, 8k"
         },
         "style_glamour": {
             "title": "✨ Вечірній шик",
-            "prompt": "RAW photo, a handsome man in a luxury penthouse, elegant evening wear, cinematic lighting, natural skin texture, professional portrait photography, 8k, photorealistic"
+            "prompt": "High-end corporate executive portrait, the man from the input images in a luxury high-rise penthouse overlooking a night city skyline, wearing an impeccably tailored charcoal grey tuxedo, moody cinematic rim lighting, dramatic shadows, shot on Leica S3, 85mm lens, f/1.2, sharp focus, professional color grading, magazine cover style, 8k"
         }
     }
 
     selected_style = styles.get(style_choice)
-    user_photo_url = user_data_store[user_id]['photo_url']
+    user_photos = user_data_store[user_id]['photos']
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ Крок 1/2: Генеруємо базове фото за допомогою SDXL...",
+        f"⏳ Запускаємо генерацію через Flux.2 Pro з урахуванням твоїх референсів (це займе близько 20-30 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
-        # Крок 1: Генеруємо якісний фон через SDXL
-        print(f"🚀 [Gen] Генеруємо базове зображення через SDXL для стилю: {selected_style['title']}")
-        base_output = replicate.run(
-            "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
+        print(f"🚀 [Flux-2-Pro] Генеруємо фото для стилю: {selected_style['title']} з {len(user_photos)} референсами")
+        
+        # Виклик моделі flux-2-pro з передачею списку референсних фото
+        output = replicate.run(
+            "black-forest-labs/flux-2-pro",
             input={
-                "width": 768,
-                "height": 960,
                 "prompt": selected_style["prompt"],
-                "refine": "expert_ensemble_refiner",
-                "apply_watermark": False,
-                "num_inference_steps": 25
+                "input_images": user_photos,
+                "aspect_ratio": "4:5",
+                "resolution": "1 MP"
             }
         )
 
-        base_image_item = base_output[0] if isinstance(base_output, list) else base_output
-        base_image_url = base_image_item.url if hasattr(base_image_item, 'url') else str(base_image_item)
-        print(f"✅ [Gen] Базове фото створено: {base_image_url}")
+        final_image_url = output.url if hasattr(output, 'url') else str(output)
+        print(f"✅ [Flux-2-Pro] Успішно створено: {final_image_url}")
 
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"⏳ Крок 2/2: Пауза кілька секунд (обхід лімітів API) і переносимо обличчя..."
-        )
-
-        # Невелика пауза (7 секунд), щоб охолодити ліміти API безкоштовного акаунта
-        await asyncio.sleep(7)
-
-        # Крок 2: Точна заміна обличчя
-        print(f"🚀 [FaceSwap] Запуск заміни обличчя...")
-        swap_output = replicate.run(
-            "cdingram/face-swap:d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
-            input={
-                "swap_image": user_photo_url,      
-                "input_image": base_image_url      
-            }
-        )
-
-        print(f"✅ [FaceSwap] Успішно! Результат: {swap_output}")
-
-        if swap_output:
-            final_image_url = swap_output.url if hasattr(swap_output, 'url') else (swap_output[0] if isinstance(swap_output, list) else str(swap_output))
-            
+        if final_image_url:
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=str(final_image_url),
-                caption=f"✨ Твоя реалістична фотосесія у стилі **{selected_style['title']}** готова!",
+                caption=f"✨ Твоя професійна фотосесія у стилі **{selected_style['title']}** готова!",
                 parse_mode='Markdown'
             )
         else:
-            await context.bot.send_message(chat_id=user_id, text="❌ Порожній результат від моделі заміни обличчя.")
+            await context.bot.send_message(chat_id=user_id, text="❌ Порожній результат від моделі генерації.")
 
     except Exception as e:
         print(f"❌ [Error]: {e}")
@@ -194,7 +189,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот з SDXL та Face Swap запущений...")
+    print("🚀 Бот на базі Flux.2 Pro та мульти-референсів запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
