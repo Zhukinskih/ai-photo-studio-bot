@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from flask import Flask
 from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -100,7 +101,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         parse_mode='Markdown'
     )
 
-if __name__ == '__main__':
+def main():
     keep_alive()
 
     TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -116,4 +117,19 @@ if __name__ == '__main__':
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
     print("🚀 Бот для ШІ-фотосесій запущений...")
-    app_bot.run_polling()
+    
+    # Сумісний запуск для нових версій Python
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        # Якщо цикл вже є
+        app_bot.run_polling()
+    else:
+        # Для ізольованих потоків
+        app_bot.run_polling()
+
+if __name__ == '__main__':
+    main()
