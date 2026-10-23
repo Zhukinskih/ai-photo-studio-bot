@@ -92,7 +92,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     styles = {
         "style_beach": {
             "title": "🌴 Тропічний пляж",
-            "prompt": "luxurious aesthetic high-fashion portrait of this person on a tropical beach at sunset, turquoise ocean, professional photography, 8k, highly detailed"
+            "prompt": "luxurious aesthetic high-fashion portrait of this person on a tropical beach at sunset, turquoise ocean, professional photography, 8k"
         },
         "style_mountain": {
             "title": "🏔 Гірське шале",
@@ -116,15 +116,14 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [Replicate Img2Img] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
+        # Використовуємо модель sdxl-img2img із точним параметром image
         output = replicate.run(
-            "stability-ai/sdxl:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438",
+            "stability-ai/sdxl-img2img:e896472342e13f3b9c7fa25368a5f806934c9d1df6437704870c57c4c47b593a",
             input={
                 "image": user_photo_url,
                 "prompt": selected_style["prompt"],
                 "negative_prompt": "ugly, blurry, low quality, distorted face, deformed",
-                "prompt_strength": 0.65,
-                "width": 768,
-                "height": 1024,
+                "prompt_strength": 0.7,
                 "num_outputs": 1
             }
         )
@@ -173,7 +172,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій з кнопкою меню запущений...")
+    print("🚀 Бот для ШІ-фотосесій Image-to-Image запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
