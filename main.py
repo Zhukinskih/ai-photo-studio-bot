@@ -39,15 +39,19 @@ def keep_alive():
 # Словник для тимчасового збереження даних користувача та його референсів
 user_data_store = {}
 
-# --- Команда /start ---
+# --- Команда /start з рекомендаціями ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_data_store[user_id] = {'photos': []}
     
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio Pro!** ✨\n\n"
-        "Створимо твою розкішну професійну фотосесію рівня глянцевих журналів.\n\n"
-        "📸 **Надішли 3-4 своїх чітких фото (селфі) одразу в одному повідомленні (альбомом)**, щоб нейромережа ідеально передала твою зовнішність."
+        "Створимо твою розкішну професійну фотосесію рівня глянцевих журналів за допомогою передової моделі Flux.2 Pro.\n\n"
+        "📸 **Як підготувати фото для ідеального результату:**\n"
+        "• Завантаж **3-4 різні фото** (оптимально у форматі **по груди**).\n"
+        "• Одне — дивлячись прямо в камеру, інші — під невеликим кутом.\n"
+        "• Чітке освітлення, без темних кімнат чи розмиття.\n\n"
+        "👇 **Просто надішли ці фото сюди одразу пачкою (альбомом)**, і ми почнемо!"
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
@@ -57,40 +61,47 @@ async def post_init(application):
         BotCommand("start", "Запустити бота та почати фотосесію")
     ])
 
-# --- Обробка завантажених фото (підтримка альбомів або кількох фото) ---
+# --- Обробка завантажених фото (альбоми або по одному) ---
 async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     if user_id not in user_data_store:
         user_data_store[user_id] = {'photos': []}
 
-    # Отримуємо найкращу якість завантаженого фото
     photo_file = update.message.photo[-1]
     file = await context.bot.get_file(photo_file.file_id)
     photo_url = file.file_path
 
-    # Додаємо у сховище
     user_data_store[user_id]['photos'].append(photo_url)
     total_photos = len(user_data_store[user_id]['photos'])
 
-    # Якщо користувач закинув кілька фото (наприклад, вже є мінімум 3), показуємо меню вибору стилів
+    # Коли є мінімум 3 фото, показуємо сітку з 6 стилів (2 на 3)
     if total_photos >= 3:
         keyboard = [
-            [InlineKeyboardButton("🏔 Панорама гірського шале (Luxury Alps)", callback_data="style_mountain")],
-            [InlineKeyboardButton("🛥 Яхта у відкритому океані (Superyacht)", callback_data="style_beach")],
-            [InlineKeyboardButton("✨ Новий Манхеттен (Penthouse Skyline)", callback_data="style_glamour")]
+            [
+                InlineKeyboardButton("🏔 Панорама Альп", callback_data="style_mountain"),
+                InlineKeyboardButton("🛥 Яхта в океані", callback_data="style_beach")
+            ],
+            [
+                InlineKeyboardButton("✨ Пентхаус Манхеттен", callback_data="style_glamour"),
+                InlineKeyboardButton("☕️ Вуличне кафе (Париж)", callback_data="style_cafe")
+            ],
+            [
+                InlineKeyboardButton("💼 Executive Портрет", callback_data="style_linkedin"),
+                InlineKeyboardButton("🎞 Retro Film 90s", callback_data="style_retro")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
             f"🎉 Отримано фото: **{total_photos}**. Успішно збережено!\n\n"
-            "Тепер обери стиль для ефектної фотосесії:",
+            "Тепер обери стиль для твоєї фотосесії:",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
     else:
         await update.message.reply_text(
-            f"✅ Фото прийнято (загалом: {total_photos}/3). Додай ще кілька, щоб досягти мінімуму в 3 фотографії.",
+            f"✅ Фото прийнято (загалом: {total_photos}/3). Додай ще кілька, щоб зібрати мінімум 3 референси.",
             parse_mode='Markdown'
         )
 
@@ -106,19 +117,31 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("❌ Будь ласка, спочатку завантаж щонайменше 3 фото за допомогою команди /start.")
         return
 
-    # Розкішні, панорамні «Вау»-промпти без мультяшності та дивного одягу
+    # 6 трендових промптів без «пластику» з панорамними локаціями
     styles = {
         "style_mountain": {
-            "title": "🏔 Панорама гірського шале",
-            "prompt": "Stunning high-end editorial lifestyle photography of the man from the input images standing on a modern glass balcony of an architectural alpine chalet, breathtaking majestic snowy mountain peaks panorama in the background, golden hour sunset light, wearing a premium cashmere crewneck sweater, shot on Hasselblad 100MP, 35mm lens, f/2.0, natural unpolished skin texture, visible micro-pores, authentic documentary look, 8k, photorealistic"
+            "title": "🏔 Панорама Альп (Quiet Luxury)",
+            "prompt": "Stunning high-end editorial lifestyle photography ofന്ത് the man from the input images standing on a modern glass balcony of an architectural alpine chalet, breathtaking majestic snowy mountain peaks panorama in the background, golden hour sunset light, wearing a premium cashmere crewneck sweater, shot on Hasselblad 100MP, 35mm lens, natural unpolished skin texture, visible micro-pores, authentic documentary look, 8k, photorealistic"
         },
         "style_beach": {
-            "title": "🛥 Яхта у відкритому океані",
+            "title": "🛥 Яхта в океані (Superyacht)",
             "prompt": "High-end luxury travel magazine photography of the man from the input images relaxing on the deck of a modern superyacht, crystal clear turquoise open ocean panorama stretching to the horizon, bright sunny day, soft sea breeze blowing messy hair, wearing a stylish unbuttoned white linen shirt, shot on Leica S3, 50mm lens, natural skin texture, zero plastic look, 8k resolution"
         },
         "style_glamour": {
-            "title": "✨ Новий Манхеттен (Penthouse)",
+            "title": "✨ Пентхаус Манхеттен",
             "prompt": "Cinematic high-end corporate portrait of the man from the input images standing by floor-to-ceiling windows of a luxury Manhattan skyscraper penthouse, dramatic night city skyline bokeh background, moody atmospheric rim lighting, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/1.4, sharp focus, natural skin pores, magazine cover aesthetic"
+        },
+        "style_cafe": {
+            "title": "☕️ Вуличне кафе (Париж)",
+            "prompt": "Candid documentary style street photography of the man from the input images sitting at an outdoor terrace of a chic Parisian cafe, holding a coffee cup, soft overcast daylight, blurred romantic European street background, wearing a stylish minimalist black hoodie, shot on Fujifilm X-T5, 35mm lens, natural skin texture, authentic lifestyle editorial"
+        },
+        "style_linkedin": {
+            "title": "💼 Executive Портрет",
+            "prompt": "Professional executive corporate headshot of the man from the input images inside a modern high-end architectural office, soft natural window light, confident calm expression, wearing a tailored navy blazer and crisp white shirt, shot on Sony A7R V, 85mm lens, razor-sharp focus on eyes, natural skin texture, Forbes magazine cover style, 8k"
+        },
+        "style_retro": {
+            "title": "🎞 Retro Film 90s",
+            "prompt": "Authentic 90s vintage film photography snapshot of the man from the input images outdoors in city, shot on Contax T2, Kodak Portra 400 film grain, natural imperfect lighting, casual unposed candid moment, genuine facial expressions, zero AI smoothness, nostalgic timeless look"
         }
     }
 
@@ -187,7 +210,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот на базі Flux.2 Pro занесено в оновлену версію...")
+    print("🚀 Повноцінний бот на базі Flux.2 Pro запущено успішно...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
