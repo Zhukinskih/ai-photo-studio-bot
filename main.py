@@ -116,14 +116,14 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо точний робочий хеш версії PhotoMaker з офіційної документації API[cite: 5]
+        # Використовуємо точний свіжий хеш версії з пітонівського прикладу API
         output = replicate.run(
-            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918ae4d9f6e57028d523f4bb8461f9f03253",
+            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
             input={
                 "input_image": user_photo_url,
                 "prompt": selected_style["prompt"],
                 "negative_prompt": "ugly, blurry, low quality, distorted face, deformed, bad anatomy",
-                "style_strength_ratio": 20,
+                "num_steps": 50,
                 "num_outputs": 1
             }
         )
@@ -131,7 +131,10 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [Replicate] Успішно отримано результат: {output}")
 
         if output:
-            image_url = output[0] if isinstance(output, list) else output
+            # Обробка результату з урахуванням об'єктів файлів Replicate
+            image_item = output[0]
+            image_url = image_item.url if hasattr(image_item, 'url') else str(image_item)
+            
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=image_url,
