@@ -1,7 +1,10 @@
 import os
 import logging
 import asyncio
+import io
 import replicate
+from PIL import Image
+import requests
 from flask import Flask
 from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
@@ -143,6 +146,21 @@ async def show_styles_menu(chat_id, context):
         parse_mode='Markdown'
     )
 
+# --- Функція для скачування та конвертації у чистий JPEG ---
+def convert_to_jpeg(image_url):
+    response = requests.get(image_url)
+    img = Image.open(io.BytesIO(response.content))
+    
+    # Конвертуємо у RGB (якщо це була RGBA або WebP з прозорістю)
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+        
+    output_buffer = io.BytesIO()
+    # Зберігаємо у високій якості JPEG (quality=95)
+    img.save(output_buffer, format="JPEG", quality=95)
+    output_buffer.seek(0)
+    return output_buffer
+
 # --- Обробка стилю та асинхронна генерація ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -227,6 +245,9 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         print(f"✅ [Flux-2-Pro] Успішно створено: {final_image_url}")
 
         if final_image_url:
+            # Конвертуємо отриманий файл у реальний JPEG через Pillow в окремому потоці
+            jpeg_file = await asyncio.to_thread(convert_to_jpeg, final_image_url)
+
             post_action_keyboard = [
                 [
                     InlineKeyboardButton("🎨 Обрати інший стиль", callback_data="action_change_style"),
@@ -235,12 +256,12 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             ]
             post_reply_markup = InlineKeyboardMarkup(post_action_keyboard)
 
-            # Надсилаємо як файл (документ) з розширенням .jpg — Telegram покаже прев'ю, але не пережме до 180КБ
+            # Надсилаємо готовий конвертований файл .jpg як документ
             await context.bot.send_document(
                 chat_id=user_id,
-                document=str(final_image_url),
+                document=jpeg_file,
                 filename=f"photo_{style_choice}.jpg",
-                caption=f"🔥 Твоя фотосесія у стилі **{selected_style['title']}** готова! (Оригінал у максимальній якості)",
+                caption=f"🔥 Твоя фотосесія у стилі **{selected_style['title']}** готова! (Оригінал .jpg у високій якості)",
                 reply_markup=post_reply_markup,
                 parse_mode='Markdown'
             )
@@ -277,7 +298,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот увімкнено та готовий до роботи...")
+    print("🚀 Бот з примусовою конвертацією у JPEG запущено...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
