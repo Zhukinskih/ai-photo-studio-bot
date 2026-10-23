@@ -114,10 +114,10 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     )
 
     try:
-        # Крок 1: Генеруємо якісний фон через SDXL (text-to-image)
+        # Крок 1: Генеруємо якісний фон через SDXL за назвою моделі (без прив'язки до застарілого хешу)
         print(f"🚀 [Gen] Генеруємо базове зображення через SDXL для стилю: {selected_style['title']}")
         base_output = replicate.run(
-            "stability-ai/sdxl:3392760264943fb64155d042b8480397163f53387842135651f743915352c842",
+            "stability-ai/sdxl",
             input={
                 "prompt": selected_style["prompt"],
                 "num_outputs": 1,
