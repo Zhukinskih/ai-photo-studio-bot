@@ -77,7 +77,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- Обробка вибору стилю та запуск Replicate Image-to-Image ---
+# --- Обробка вибору стилю та запуск Replicate ---
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -114,16 +114,18 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     )
 
     try:
-        print(f"🚀 [Replicate Img2Img] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
+        print(f"🚀 [Replicate] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо загальний рядок моделі без застарілого хешу версії
+        # Використовуємо офіційну актуальну модель SDXL із підтримкою вхідного зображення
         output = replicate.run(
-            "stability-ai/sdxl-img2img",
+            "stability-ai/sdxl",
             input={
                 "image": user_photo_url,
                 "prompt": selected_style["prompt"],
                 "negative_prompt": "ugly, blurry, low quality, distorted face, deformed",
                 "prompt_strength": 0.7,
+                "width": 768,
+                "height": 1024,
                 "num_outputs": 1
             }
         )
@@ -172,7 +174,7 @@ def main():
     app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот для ШІ-фотосесій Image-to-Image запущений...")
+    print("🚀 Бот для ШІ-фотосесій запущений...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
