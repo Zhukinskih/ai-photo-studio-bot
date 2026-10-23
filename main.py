@@ -114,10 +114,10 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     )
 
     try:
-        # Крок 1: Генеруємо якісне базове фото через Flux Schnell з прив'язкою повної назви
+        # Крок 1: Генеруємо якісне базове фото через Flux Schnell з точним хешем версії
         print(f"🚀 [Gen] Генеруємо базове зображення для стилю: {selected_style['title']}")
         base_output = replicate.run(
-            "black-forest-labs/flux-schnell",
+            "black-forest-labs/flux-schnell:f5ab57827e852934ff2d23e595e0c5ccf0d8a1789c670a256dfd8a8b16347895",
             input={
                 "prompt": selected_style["prompt"],
                 "num_outputs": 1,
