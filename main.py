@@ -134,20 +134,19 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             text=f"⏳ Крок 2/2: Переносимо твоє обличчя за допомогою Face Swap..."
         )
 
-        # Крок 2: Точна заміна обличчя згідно з твоїм прикладом API
+        # Крок 2: Точна заміна обличчя з чітко заданим хешем версії
         print(f"🚀 [FaceSwap] Запуск заміни обличчя...")
         swap_output = replicate.run(
             "cdingram/face-swap:d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
             input={
-                "swap_image": user_photo_url,      # Твоє селфі (те, що підставляємо)
-                "input_image": base_image_url      # Згенероване фото (куди підставляємо)
+                "swap_image": user_photo_url,      
+                "input_image": base_image_url      
             }
         )
 
         print(f"✅ [FaceSwap] Успішно! Результат: {swap_output}")
 
         if swap_output:
-            # Обробка результату (модель повертає об'єкт файлу з атрибутом url або рядок)
             final_image_url = swap_output.url if hasattr(swap_output, 'url') else (swap_output[0] if isinstance(swap_output, list) else swap_output)
             
             await context.bot.send_photo(
@@ -175,7 +174,6 @@ def main():
         print("❌ Помилка: Змінна TELEGRAM_TOKEN не знайдена!")
         exit(1)
 
-    # Примусово створюємо цикл подій для Python 3.14+
     try:
         loop = asyncio.get_event_loop_policy().get_event_loop()
         if loop.is_closed():
