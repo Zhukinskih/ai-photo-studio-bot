@@ -116,9 +116,9 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         print(f"🚀 [PhotoMaker] Запуск для стилю: {selected_style['title']} з фото: {user_photo_url}")
         
-        # Використовуємо офіційну модель PhotoMaker, яка точно прив'язує обличчя до ключового слова "img" у промпті
+        # Викликаємо модель за її чистим ім'ям без фіксованого хешу версії
         output = replicate.run(
-            "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918ae4d9f6e57028d523f4bb8461f9f03253",
+            "tencentarc/photomaker",
             input={
                 "input_image": user_photo_url,
                 "prompt": selected_style["prompt"],
