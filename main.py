@@ -42,14 +42,12 @@ user_data_store = {}
 # --- Команда /start ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    # Скидаємо/ініціалізуємо список фото для нового сеансу
     user_data_store[user_id] = {'photos': []}
     
     welcome_text = (
         "✨ **Вітаю в AI Photo Studio Pro!** ✨\n\n"
-        "Створимо твою професійну фотосесію за допомогою передової моделі Flux.2 Pro.\n\n"
-        "📸 **Будь ласка, надішли 3 різні чіткі селфі** (по черзі), щоб нейромережа ідеально запам'ятала твої риси обличчя під різними кутами.\n\n"
-        "Завантажено фото: **0 / 3**"
+        "Створимо твою розкішну професійну фотосесію рівня глянцевих журналів.\n\n"
+        "📸 **Надішли 3-4 своїх чітких фото (селфі) одразу в одному повідомленні (альбомом)**, щоб нейромережа ідеально передала твою зовнішність."
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
@@ -59,40 +57,40 @@ async def post_init(application):
         BotCommand("start", "Запустити бота та почати фотосесію")
     ])
 
-# --- Обробка завантажених фото (збираємо до 3 штук) ---
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# --- Обробка завантажених фото (підтримка альбомів або кількох фото) ---
+async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     if user_id not in user_data_store:
         user_data_store[user_id] = {'photos': []}
 
+    # Отримуємо найкращу якість завантаженого фото
     photo_file = update.message.photo[-1]
     file = await context.bot.get_file(photo_file.file_id)
     photo_url = file.file_path
 
-    # Додаємо фото у список референсів користувача
+    # Додаємо у сховище
     user_data_store[user_id]['photos'].append(photo_url)
-    current_count = len(user_data_store[user_id]['photos'])
+    total_photos = len(user_data_store[user_id]['photos'])
 
-    if current_count < 3:
-        await update.message.reply_text(
-            f"✅ Фото #{current_count} прийнято!\n"
-            f"Будь ласка, надішли ще **{3 - current_count}** фото.",
-            parse_mode='Markdown'
-        )
-    else:
-        # Коли зібрано всі 3 фото, показуємо меню вибору стилів
+    # Якщо користувач закинув кілька фото (наприклад, вже є мінімум 3), показуємо меню вибору стилів
+    if total_photos >= 3:
         keyboard = [
-            [InlineKeyboardButton("🌴 Тропічний пляж (Editorial)", callback_data="style_beach")],
-            [InlineKeyboardButton("🏔 Гірське шале (Lifestyle)", callback_data="style_mountain")],
-            [InlineKeyboardButton("✨ Вечірній шик (Dark Moody)", callback_data="style_glamour")]
+            [InlineKeyboardButton("🏔 Панорама гірського шале (Luxury Alps)", callback_data="style_mountain")],
+            [InlineKeyboardButton("🛥 Яхта у відкритому океані (Superyacht)", callback_data="style_beach")],
+            [InlineKeyboardButton("✨ Новий Манхеттен (Penthouse Skyline)", callback_data="style_glamour")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            "🎉 **Усі 3 референси успішно збережено!**\n\n"
-            "Тепер обери стиль для твоєї професійної фотосесії:",
+            f"🎉 Отримано фото: **{total_photos}**. Успішно збережено!\n\n"
+            "Тепер обери стиль для ефектної фотосесії:",
             reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    else:
+        await update.message.reply_text(
+            f"✅ Фото прийнято (загалом: {total_photos}/3). Додай ще кілька, щоб досягти мінімуму в 3 фотографії.",
             parse_mode='Markdown'
         )
 
@@ -105,22 +103,22 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     style_choice = query.data
 
     if user_id not in user_data_store or len(user_data_store[user_id].get('photos', [])) < 3:
-        await query.edit_message_text("❌ Будь ласка, спочатку надішли 3 селфі за допомогою команди /start.")
+        await query.edit_message_text("❌ Будь ласка, спочатку завантаж щонайменше 3 фото за допомогою команди /start.")
         return
 
-    # Оновлені професійні промпти з акцентом на природність, пори та плівкову текстуру (без "пластику")
+    # Розкішні, панорамні «Вау»-промпти без мультяшності та дивного одягу
     styles = {
-        "style_beach": {
-            "title": "🌴 Тропічний пляж",
-            "prompt": "Raw unfiltered candid editorial photography of the man from the input images on a tropical beach at sunset, authentic skin imperfections, visible pores, natural skin texture, slight sweat, unstyled messy hair blowing in the wind, shot on 35mm film, Kodak Portra 400, Fujifilm color science, authentic documentary style, zero AI smoothness"
-        },
         "style_mountain": {
-            "title": "🏔 Гірське шале",
-            "prompt": "Raw unfiltered candid lifestyle photography of the man from the input images inside an alpine wooden chalet, natural unpolished skin texture, visible pores, subtle stubble, authentic facial asymmetry, casual pose, shot on Leica M10, 50mm lens, natural window daylight, documentary photography, no plastic skin"
+            "title": "🏔 Панорама гірського шале",
+            "prompt": "Stunning high-end editorial lifestyle photography of the man from the input images standing on a modern glass balcony of an architectural alpine chalet, breathtaking majestic snowy mountain peaks panorama in the background, golden hour sunset light, wearing a premium cashmere crewneck sweater, shot on Hasselblad 100MP, 35mm lens, f/2.0, natural unpolished skin texture, visible micro-pores, authentic documentary look, 8k, photorealistic"
+        },
+        "style_beach": {
+            "title": "🛥 Яхта у відкритому океані",
+            "prompt": "High-end luxury travel magazine photography of the man from the input images relaxing on the deck of a modern superyacht, crystal clear turquoise open ocean panorama stretching to the horizon, bright sunny day, soft sea breeze blowing messy hair, wearing a stylish unbuttoned white linen shirt, shot on Leica S3, 50mm lens, natural skin texture, zero plastic look, 8k resolution"
         },
         "style_glamour": {
-            "title": "✨ Вечірній шик",
-            "prompt": "Raw unfiltered corporate portrait of the man from the input images in a luxury penthouse, wearing a charcoal grey suit, authentic skin texture with natural pores and tiny imperfections, realistic micro-details, shot on Sony Alpha 1, natural indoor ambient light, professional editorial journalism style, zero CGI look"
+            "title": "✨ Новий Манхеттен (Penthouse)",
+            "prompt": "Cinematic high-end corporate portrait of the man from the input images standing by floor-to-ceiling windows of a luxury Manhattan skyscraper penthouse, dramatic night city skyline bokeh background, moody atmospheric rim lighting, wearing a sharp tailored dark charcoal suit, shot on Sony Alpha 1, 85mm lens, f/1.4, sharp focus, natural skin pores, magazine cover aesthetic"
         }
     }
 
@@ -129,14 +127,13 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         f"🎨 Обрано стиль: **{selected_style['title']}**!\n\n"
-        f"⏳ Запускаємо генерацію через Flux.2 Pro з урахуванням твоїх референсів (це займе близько 20-30 секунд)...",
+        f"⏳ Створюємо шедевр через Flux.2 Pro (це займе близько 20-30 секунд)...",
         parse_mode='Markdown'
     )
 
     try:
-        print(f"🚀 [Flux-2-Pro] Генеруємо фото для стилю: {selected_style['title']} з {len(user_photos)} референсами")
+        print(f"🚀 [Flux-2-Pro] Генерація для стилю: {selected_style['title']} з {len(user_photos)} референсами")
         
-        # Виклик моделі flux-2-pro з передачею списку референсних фото
         output = replicate.run(
             "black-forest-labs/flux-2-pro",
             input={
@@ -154,7 +151,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
             await context.bot.send_photo(
                 chat_id=user_id,
                 photo=str(final_image_url),
-                caption=f"✨ Твоя професійна фотосесія у стилі **{selected_style['title']}** готова!",
+                caption=f"🔥 Твоя приголомшлива фотосесія у стилі **{selected_style['title']}** готова! Готуй лайки в соцмережах 😉",
                 parse_mode='Markdown'
             )
         else:
@@ -187,10 +184,10 @@ def main():
     app_bot = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
     app_bot.add_handler(CommandHandler("start", start_command))
-    app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app_bot.add_handler(MessageHandler(filters.PHOTO, handle_photos))
     app_bot.add_handler(CallbackQueryHandler(handle_style_selection))
 
-    print("🚀 Бот на базі Flux.2 Pro та мульти-референсів запущений...")
+    print("🚀 Бот на базі Flux.2 Pro занесено в оновлену версію...")
     app_bot.run_polling()
 
 if __name__ == '__main__':
